@@ -111,7 +111,7 @@ def lexer(code):#breaks down the statement
                     f"Invalid character '{value}'",
                     line,
                     column
-    )
+                    )
             )
 
         else:
@@ -255,7 +255,12 @@ class Parser:
             return True
 
         self.errors.append(
-            f"Expected {expected} but found {token.token_type}"
+                    CompilerError(
+                    "Syntax Error",
+                    f"Expected {expected} but found {token.token_type} '{token.value}'",
+                    token.line,
+                    token.column
+                    )
         )
         return False
 
