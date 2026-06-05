@@ -52,6 +52,17 @@ class Token:
     def __repr__(self):
         return f"{self.token_type}('{self.value}') at line {self.line}, column {self.column}"
 
+#=======================================================================
+class CompilerError:
+    def __init__(self, error_type, message, line, column):
+        self.error_type = error_type
+        self.message = message
+        self.line = line
+        self.column = column
+
+    def __repr__(self):
+        return f"[{self.error_type}] line {self.line}, column {self.column}: {self.message}"
+
 #===============================================================================================================
 def lexer(code):#breaks down the statement
     tokens = []
@@ -95,7 +106,12 @@ def lexer(code):#breaks down the statement
 
         elif token_type == "MISMATCH":
             errors.append(
-                f"Lexical Error at line {line}, column {column}: Invalid character '{value}'"
+                    CompilerError(
+                    "Lexical Error",
+                    f"Invalid character '{value}'",
+                    line,
+                    column
+    )
             )
 
         else:
