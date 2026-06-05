@@ -264,6 +264,30 @@ class Parser:
         )
         return False
 
+    def syntax_error(self, message):
+        token = self.peek()
+
+        self.errors.append(
+            CompilerError(
+                "Syntax Error",
+                message,
+                token.line,
+                token.column
+            )
+    )
+
+    def synchronize(self):
+        while self.peek().token_type != "EOF":
+            if self.peek().token_type == "SEMICOLON":
+                self.advance()
+                return
+
+            if self.peek().token_type == "RBRACE":
+                return
+
+            self.advance()
+            
+
     def parse_declaration(self):
 
         
