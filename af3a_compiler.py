@@ -286,7 +286,7 @@ class Parser:
                 return
 
             self.advance()
-            
+
 
     def parse_declaration(self):
 
@@ -295,7 +295,7 @@ class Parser:
 
         
         if self.peek().token_type != "IDENTIFIER":
-            self.errors.append("Expected variable name")
+            self.syntax_error("Expected variable name after type keyword")
             return
 
         name = self.peek().value
@@ -305,7 +305,7 @@ class Parser:
         if self.peek().token_type == "OPERATOR" and self.peek().value == "=":
             self.advance()
         else:
-            self.errors.append("Missing '='")
+            self.syntax_error("Missing '=' in variable declaration")
             return
 
         
@@ -317,7 +317,7 @@ class Parser:
         if self.peek().token_type == "SEMICOLON":
             self.advance()
         else:
-            self.errors.append("Missing semicolon")
+            self.syntax_error("Missing semicolon ';' after declaration")
             return
 
         
@@ -335,7 +335,7 @@ class Parser:
         self.match("KEYWORD") #checks expexted
 
         if self.peek().token_type != "LPAREN":
-            self.errors.append("Expected (")
+            self.syntax_error("Expected '('")
             return
         else:
             self.advance()
@@ -346,20 +346,20 @@ class Parser:
             value = self.peek().value
             self.advance()
         else:
-            self.errors.append('Expected argument types: STRING or INTEGER or FLOAT')
+            self.syntax_error("Expected argument types: STRING or INTEGER or FLOAT or IDENTIFIER")
             return
         
         
 
         if self.peek().token_type != "RPAREN":
-            self.errors.append("Expected )")
+            self.syntax_error("Expected ')'")
             return
         else:
             self.advance()
         
         
         if self.peek().token_type != "SEMICOLON":
-            self.errors.append("Expected ;")
+            self.syntax_error("Expected ';' after print statement")
             return
         else:
             self.advance()
@@ -410,7 +410,7 @@ class Parser:
         self.match("KEYWORD") # matches 'shoghol'
         
         if self.peek().token_type != "IDENTIFIER":
-            self.errors.append("Expected function name")
+            self.syntax_error("Expected function name")
             return None
             
         name = self.peek().value
@@ -430,7 +430,7 @@ class Parser:
 
         
         if self.peek().token_type != "LPAREN":
-            self.errors.append("Expected '('")
+            self.syntax_error("Expected '('")
             return 
         else:
             self.advance()
@@ -444,7 +444,7 @@ class Parser:
 
         
         if self.peek().token_type != "RPAREN":
-            self.errors.append("Expected ')'")
+            self.syntax_error("Expected ')'")
             return
         else:
             self.advance()
@@ -462,7 +462,7 @@ class Parser:
         if self.peek().token_type == "OPERATOR" and self.peek().value == "=":
             self.advance()
         else:
-            self.errors.append("Expected '=' in assignment")
+            self.syntax_error("Expected '=' in assignment")
             return None
 
         value = self.parse_expression()
@@ -474,7 +474,7 @@ class Parser:
             if self.peek().token_type == "SEMICOLON":
                 self.advance()
             else:
-                self.errors.append("Expected ';' after assignment")
+                self.syntax_error("Expected ';' after assignment")
                 return None
 
         return AssignmentStatement(name, value)
@@ -548,11 +548,11 @@ class Parser:
                 self.advance() 
                 return expr
             else:
-                self.errors.append("Expected ')' after expression")
+                self.syntax_error("Expected ')' after expression")
                 return None
                 
         else:
-            self.errors.append(f"Unexpected token in math expression: {token.value}")
+            self.syntax_error(f"Unexpected token in math expression: {token.value}")
             return None
 
 
@@ -562,7 +562,7 @@ class Parser:
         if self.peek().token_type == "LPAREN":
             self.advance()
         else:
-            self.errors.append("Expected: (")
+            self.syntax_error("Expected: (")
             return None
 
         condition = self.parse_expression()
@@ -572,7 +572,7 @@ class Parser:
         if self.peek().token_type == "RPAREN":
             self.advance()
         else:
-            self.errors.append("Expected: )")
+            self.syntax_error("Expected: )")
             return None
 
         body = self.parse_statement()
@@ -668,7 +668,7 @@ class Parser:
         
         # 6. Fallback/Error
         else:
-            self.errors.append(f"Unknown statement starting with: {token.value}")
+            self.syntax_error(f"Unknown statement starting with: {token.value}")
             self.advance()
             return None
 
@@ -678,6 +678,8 @@ class Parser:
             stmt = self.parse_statement()
             if stmt:
                 self.ast.append(stmt)
+            else: 
+                self.synchronize()
         return self.ast, self.errors
 
 #===============================================================================================================
@@ -718,5 +720,10 @@ print("AST:")
 for node in ast:
     print(node)
 
-print("\nErrors:")
-print(errors)
+print("\nLexical Errors:")
+for error in lexical_errors:
+    print(error)
+
+print("\nSyntax Errors:")
+for error in errors:
+    print(error)
