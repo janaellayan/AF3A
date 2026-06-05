@@ -132,7 +132,8 @@ class ASTNode:
 
 
 class VarDeclaration(ASTNode):
-    def __init__(self, name, value):
+    def __init__(self, var_type, name, value):
+        self.var_type = var_type
         self.name = name
         self.value = value
 
@@ -291,6 +292,7 @@ class Parser:
     def parse_declaration(self):
 
         
+        var_type=self.peek().value
         self.match("KEYWORD")
 
         
@@ -535,7 +537,7 @@ class Parser:
         token = self.peek()
         
   
-        if token.token_type in ["INTEGER", "FLOAT", "IDENTIFIER", "STRING"]:
+        if token.token_type in ["INTEGER", "FLOAT", "IDENTIFIER", "STRING"] or token.value in ["sa7", "ghalat"]:
             self.advance()
             return token.value 
             
@@ -682,6 +684,207 @@ class Parser:
                 self.synchronize()
         return self.ast, self.errors
 
+
+class Symbol:
+    def __init__(self, name, symbol_type, scope):
+        self.name = name
+        self.symbol_type = symbol_type
+        self.scope = scope
+
+    def __repr__(self):
+        return f"{self.name} | type: {self.symbol_type} | scope: {self.scope}"
+
+
+class SemanticAnalyzer:
+    def __init__(self):
+        self.symbol_table = []
+        self.errors = []
+        self.scope = "global"
+        self.in_loop = 0
+        self.in_function = 0
+
+    def semantic_error(self, message):
+        self.errors.append(
+            CompilerError(
+                "Semantic Error",
+                message,
+                0,
+                0
+            )
+        )
+
+    def lookup(self, name):
+        for symbol in reversed(self.symbol_table):
+            if symbol.name == name and symbol.scope in [self.scope, "global"]:
+                return symbol
+        return None
+
+    def exists_in_current_scope(self, name):
+        for symbol in self.symbol_table:
+            if symbol.name == name and symbol.scope == self.scope:
+                return True
+        return False
+
+    def add_symbol(self, name, symbol_type):
+        if self.exists_in_current_scope(name):
+            self.semantic_error(f"Variable '{name}' is already declared in this scope")
+            return
+
+        self.symbol_table.append(Symbol(name, symbol_type, self.scope))
+
+    def infer_type(self, value):
+        if isinstance(value, Expressions):
+            left_type = self.infer_type(value.arg1)
+            right_type = self.infer_type(value.arg2)
+
+            if value.exp in ["==", "!=", "<", ">", "<=", ">="]:
+                return "manteq"
+
+            if value.exp in ["+", "-", "*", "/", "%"]:
+                if left_type == "kalema" or right_type == "kalema":
+                    self.semantic_error("Cannot use math operators with kalema/string values")
+                    return "unknown"
+
+                if left_type == "kasr" or right_type == "kasr":
+                    return "kasr"
+
+                if left_type == "sahih" and right_type == "sahih":
+                    return "sahih"
+
+            return "unknown"
+
+        value = str(value)
+
+        if value.startswith('"') and value.endswith('"'):
+            return "kalema"
+
+        if value in ["sa7", "ghalat"]:
+            return "manteq"
+
+        if "." in value and value.replace(".", "", 1).isdigit():
+            return "kasr"
+
+        if value.isdigit():
+            return "sahih"
+
+        symbol = self.lookup(value)
+        if symbol:
+            return symbol.symbol_type
+
+        self.semantic_error(f"Variable '{value}' used before declaration")
+        return "unknown"
+
+    def types_compatible(self, declared_type, value_type):
+        if value_type == "unknown":
+            return True
+
+        if declared_type == value_type:
+            return True
+
+        if declared_type == "kasr" and value_type == "sahih":
+            return True
+
+        return False
+
+    def analyze_statement(self, node):
+        if isinstance(node, VarDeclaration):
+            value_type = self.infer_type(node.value)
+
+            if not self.types_compatible(node.var_type, value_type):
+                self.semantic_error(
+                    f"Cannot assign {value_type} to variable '{node.name}' of type {node.var_type}"
+                )
+
+            self.add_symbol(node.name, node.var_type)
+
+        elif isinstance(node, AssignmentStatement):
+            symbol = self.lookup(node.name)
+
+            if not symbol:
+                self.semantic_error(f"Variable '{node.name}' assigned before declaration")
+                return
+
+            value_type = self.infer_type(node.value)
+
+            if not self.types_compatible(symbol.symbol_type, value_type):
+                self.semantic_error(
+                    f"Cannot assign {value_type} to variable '{node.name}' of type {symbol.symbol_type}"
+                )
+
+        elif isinstance(node, PrintStatement):
+            self.infer_type(node.value)
+
+        elif isinstance(node, InputStatement):
+            if not self.lookup(node.name):
+                self.semantic_error(f"Input variable '{node.name}' used before declaration")
+
+        elif isinstance(node, IfStatement):
+            condition_type = self.infer_type(node.condition)
+
+            if condition_type != "manteq":
+                self.semantic_error("If condition must be a boolean/manteq expression")
+
+            self.analyze_statement(node.body)
+
+            if node.else_body:
+                self.analyze_statement(node.else_body)
+
+        elif isinstance(node, WhileStatement):
+            condition_type = self.infer_type(node.condition)
+
+            if condition_type != "manteq":
+                self.semantic_error("While condition must be a boolean/manteq expression")
+
+            self.in_loop += 1
+            self.analyze_statement(node.body)
+            self.in_loop -= 1
+
+        elif isinstance(node, ForStatement):
+            self.in_loop += 1
+
+            self.analyze_statement(node.init)
+
+            condition_type = self.infer_type(node.condition)
+            if condition_type != "manteq":
+                self.semantic_error("For condition must be a boolean/manteq expression")
+
+            self.analyze_statement(node.update)
+            self.analyze_statement(node.body)
+
+            self.in_loop -= 1
+
+        elif isinstance(node, BlockStatement):
+            for statement in node.statements:
+                self.analyze_statement(statement)
+
+        elif isinstance(node, BreakStatement):
+            if self.in_loop == 0:
+                self.semantic_error("'waqef' used outside a loop")
+
+        elif isinstance(node, ContinueStatement):
+            if self.in_loop == 0:
+                self.semantic_error("'kammel' used outside a loop")
+
+        elif isinstance(node, ReturnStatement):
+            if self.in_function == 0:
+                self.semantic_error("'raje3' used outside a function")
+
+        elif isinstance(node, FunctionDeclaration):
+            old_scope = self.scope
+            self.scope = node.name
+            self.in_function += 1
+
+            self.analyze_statement(node.body)
+
+            self.in_function -= 1
+            self.scope = old_scope
+
+    def analyze(self, ast):
+        for node in ast:
+            self.analyze_statement(node)
+
+        return self.symbol_table, self.errors
+
 #===============================================================================================================
 
 # main:
@@ -716,9 +919,16 @@ parser = Parser(tokens)
 
 ast, errors = parser.parse()
 
+semantic_analyzer = SemanticAnalyzer()
+symbol_table, semantic_errors = semantic_analyzer.analyze(ast)
+
 print("AST:")
 for node in ast:
     print(node)
+
+print("\nSymbol Table:")
+for symbol in symbol_table:
+    print(symbol)
 
 print("\nLexical Errors:")
 for error in lexical_errors:
@@ -726,4 +936,8 @@ for error in lexical_errors:
 
 print("\nSyntax Errors:")
 for error in errors:
+    print(error)
+
+print("\nSemantic Errors:")
+for error in semantic_errors:
     print(error)
