@@ -889,25 +889,22 @@ class SemanticAnalyzer:
 
 # main:
 code = """
+shoghol main() {
+    sahih x = 5;
+    kasr y = 3.2;
+    kalema message = "Done";
+    manteq check = sa7;
 
-    shoghol main() 
-    {    
-        lkol (sahih i = 0; i < x; i = i + 1) 
-        {
-            etha (x != 99) {
-                raje3;
-            }
-        }
-
-        etha (x > 5) {
-            itba3("High");
-        } aw etha (x > 2) {
-            itba3("Medium");
+    lkol (sahih i = 0; i < x; i = i + 1) {
+        etha (i == 3) {
+            waqef;
         } aw {
-            itba3("Low");
+            itba3(message);
         }
     }
 
+    raje3;
+}
 """
 
 tokens, lexical_errors = lexer(code)
