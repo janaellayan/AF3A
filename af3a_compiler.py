@@ -43,13 +43,13 @@ TOKEN_TYPES = {
 import re
 
 class Token:
-    def _init_(self, token_type, value, line, column):
+    def __init__(self, token_type, value, line, column):
         self.token_type = token_type
         self.value = value
         self.line = line
         self.column = column
 
-    def _repr_(self):
+    def __repr__(self):
         return f"{self.token_type}('{self.value}') at line {self.line}, column {self.column}"
 
 #===============================================================================================================
@@ -116,35 +116,35 @@ class ASTNode:
 
 
 class VarDeclaration(ASTNode):
-    def _init_(self, name, value):
+    def __init__(self, name, value):
         self.name = name
         self.value = value
 
-    def _repr_(self):
+    def __repr__(self):
         return f"VarDeclaration(name={self.name}, value={self.value})"
 
 
 class InputStatement(ASTNode):
-    def _init_(self, name):
+    def __init__(self, name):
         self.name = name
 
-    def _repr_(self):
+    def __repr__(self):
         return f"InputStatement(name = {self.name})"
     
 class WhileStatement(ASTNode):
-    def _init_(self, condition, body):
+    def __init__(self, condition, body):
         self.body = body
         self.condition = condition
-    def _repr_(self):
+    def __repr__(self):
         return f"WhileStatement(condition={self.condition}, body={self.body})"
 
 class IfStatement(ASTNode):
-    def _init_(self, condition, body, else_body=None):
+    def __init__(self, condition, body, else_body=None):
         self.condition = condition
         self.body = body
         self.else_body = else_body # 'aw' or 'aw etha'
     
-    def _repr_(self):
+    def __repr__(self):
         if self.else_body:
             return f"IfStatement(condition={self.condition}, body={self.body}, else_body={self.else_body})"
         return f"IfStatement(condition={self.condition}, body={self.body})"
@@ -152,65 +152,65 @@ class IfStatement(ASTNode):
 
 
 class PrintStatement(ASTNode):
-    def _init_(self, value):
+    def __init__(self, value):
         self.value = value
 
-    def _repr_(self):
+    def __repr__(self):
         return f"PrintStatement(value={self.value})"
 
 
 class BlockStatement(ASTNode):
-        def _init_(self, statements):
+        def __init__(self, statements):
             self.statements = statements
 
-        def _repr_(self):
+        def __repr__(self):
             return f"BlockStatement(\n  " + "\n  ".join(repr(s) for s in self.statements) + "\n)"    
 
 class ContinueStatement(ASTNode):
-    def _repr_(self):
+    def __repr__(self):
         return "ContinueStatement"
     
 class ReturnStatement(ASTNode):
-    def _repr_(self):
+    def __repr__(self):
         return "ReturnSatement"
 class BreakStatement(ASTNode):
-    def _repr_(self):
+    def __repr__(self):
         return "BreakStatement"
     
 class Expressions(ASTNode):
-    def _init_(self, arg1, exp, arg2):
+    def __init__(self, arg1, exp, arg2):
         self.arg1 = arg1
         self.exp = exp
         self.arg2 = arg2
     
-    def _repr_(self):
+    def __repr__(self):
         return f"Expression(left={self.arg1}, op='{self.exp}', right={self.arg2})"
     
 
 class AssignmentStatement(ASTNode):
-    def _init_(self, name, value):
+    def __init__(self, name, value):
         self.name = name
         self.value = value
 
-    def _repr_(self):
+    def __repr__(self):
         return f"AssignmentStatement(name={self.name}, value={self.value})"
     
 class FunctionDeclaration(ASTNode):
-    def _init_(self, name, body):
+    def __init__(self, name, body):
         self.name = name
         self.body = body
 
-    def _repr_(self):
+    def __repr__(self):
         return f"FunctionDeclaration(name={self.name}, body={self.body})"
 
 class ForStatement(ASTNode):
-    def _init_(self, init, condition, update, body):
+    def __init__(self, init, condition, update, body):
         self.init = init
         self.condition = condition
         self.update = update
         self.body = body
 
-    def _repr_(self):
+    def __repr__(self):
         return f"ForStatement(\n  init={self.init},\n  cond={self.condition},\n  update={self.update},\n  body={self.body}\n)"
 
 #===============================================================================================================
@@ -219,7 +219,7 @@ class ForStatement(ASTNode):
 
 class Parser:
 
-    def _init_(self, tokens):
+    def __init__(self, tokens):
         self.tokens = tokens
         self.current = 0
         self.errors = []
